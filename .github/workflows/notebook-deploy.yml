@@ -32,13 +32,24 @@ jobs:
             https://api.github.com/repos/data-desk-eco/.github/tarball/main | \
             tar -xz --strip-components=1 --wildcards '*/.claude' '*/template.html'
 
+      - name: Authenticate to Google Cloud
+        if: ${{ !inputs.skip_data }}
+        env:
+          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+        run: |
+          if [ -z "$GCP_SA_KEY" ]; then
+            echo "GCP_SA_KEY not set — skipping gcloud auth; notebooks that need provider secrets will fail."
+            exit 0
+          fi
+          echo "$GCP_SA_KEY" > /tmp/gcp-sa.json
+          gcloud auth activate-service-account --key-file=/tmp/gcp-sa.json --quiet
+          rm /tmp/gcp-sa.json
+
       - name: Run make data
         if: ${{ !inputs.skip_data }}
         env:
           GH_TOKEN: ${{ github.token }}
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          EOG_EMAIL: ${{ secrets.EOG_EMAIL }}
-          EOG_PASSWORD: ${{ secrets.EOG_PASSWORD }}
         run: |
           if [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
             npm install @anthropic-ai/claude-code
