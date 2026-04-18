@@ -41,7 +41,7 @@ jobs:
             echo "GCP_SA_KEY not set — skipping gcloud auth; notebooks that need provider secrets will fail."
             exit 0
           fi
-          echo "$GCP_SA_KEY" > /tmp/gcp-sa.json
+          printf '%s' "$GCP_SA_KEY" > /tmp/gcp-sa.json
           gcloud auth activate-service-account --key-file=/tmp/gcp-sa.json --quiet
           rm /tmp/gcp-sa.json
 
