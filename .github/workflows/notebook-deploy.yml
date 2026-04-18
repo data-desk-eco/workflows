@@ -7,10 +7,6 @@ on:
         description: 'Skip make data step'
         type: boolean
         default: false
-      install_uv:
-        description: 'Install uv before make data'
-        type: boolean
-        default: false
 
 jobs:
   deploy:
@@ -35,10 +31,6 @@ jobs:
           curl -sL -H "Authorization: token $GH_TOKEN" \
             https://api.github.com/repos/data-desk-eco/.github/tarball/main | \
             tar -xz --strip-components=1 --wildcards '*/.claude' '*/template.html'
-
-      - name: Install uv
-        if: ${{ inputs.install_uv }}
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh && echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Run make data
         if: ${{ !inputs.skip_data }}
