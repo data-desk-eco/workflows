@@ -37,6 +37,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          EOG_EMAIL: ${{ secrets.EOG_EMAIL }}
+          EOG_PASSWORD: ${{ secrets.EOG_PASSWORD }}
         run: |
           if [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
             npm install @anthropic-ai/claude-code
