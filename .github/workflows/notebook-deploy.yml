@@ -21,6 +21,8 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - run: yarn --frozen-lockfile
 
       - name: Setup
@@ -74,7 +76,23 @@ jobs:
         run: |
           git config user.name "github-actions[bot]" && git config user.email "github-actions[bot]@users.noreply.github.com"
           [ -d data ] && git add data/
-          git diff --cached --quiet || git commit -m "Update data and shared files" && git push
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "Update data and shared files"
+          # The checkout is shallow, so the remote main may have advanced (e.g. a
+          # concurrent or scheduled deploy) and a plain push fails non-fast-forward
+          # ("fetch first"). Rebase onto the latest main and retry so it fast-forwards.
+          for attempt in 1 2 3; do
+            if git push; then
+              exit 0
+            fi
+            echo "Push rejected (attempt $attempt); rebasing onto origin/${GITHUB_REF_NAME:-main} and retrying."
+            git pull --rebase --autostash origin "${GITHUB_REF_NAME:-main}" || exit 1
+          done
+          echo "Failed to push after rebasing; giving up." >&2
+          exit 1
 
       - run: make build
       - run: "[ -f favicon.ico ] && cp favicon.ico docs/.observable/dist/ || true"
