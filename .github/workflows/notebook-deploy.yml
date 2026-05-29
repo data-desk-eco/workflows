@@ -32,7 +32,10 @@ jobs:
             https://api.github.com/repos/data-desk-eco/.github/tarball/main | \
             tar -xz --strip-components=1 --wildcards '*/.claude' '*/template.html' '*/scripts/cf-access.sh'
 
+      # Notebooks are public by default. Committing an access.conf opts the repo
+      # into Cloudflare Zero Trust gating (see scripts/cf-access.sh).
       - name: Configure Cloudflare Access
+        if: hashFiles('access.conf') != ''
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
