@@ -30,7 +30,17 @@ jobs:
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           curl -sL -H "Authorization: token $GH_TOKEN" \
             https://api.github.com/repos/data-desk-eco/.github/tarball/main | \
-            tar -xz --strip-components=1 --wildcards '*/.claude' '*/template.html'
+            tar -xz --strip-components=1 --wildcards '*/.claude' '*/template.html' '*/scripts/cf-access.sh'
+
+      - name: Configure Cloudflare Access
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "CLOUDFLARE_API_TOKEN not set — skipping Access config."
+            exit 0
+          fi
+          bash scripts/cf-access.sh
 
       - name: Authenticate to Google Cloud
         if: ${{ !inputs.skip_data }}
