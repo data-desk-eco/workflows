@@ -1,0 +1,39 @@
+name: Notebook agent
+
+# reusable trigger for the md-notebook flow: builds the notebook from index.md via the
+# notebook-agent cloud run job (see data-desk-eco/.github, infra/notebook-agent/).
+# callers need permissions: contents+statuses+actions write, and secrets: inherit.
+#
+# with no AGENT_GH_TOKEN org secret, the job pushes with the caller's GITHUB_TOKEN, so
+# this workflow stays alive (idle) while the agent runs, then dispatches the deploy
+# itself (GITHUB_TOKEN pushes don't trigger workflows). setting AGENT_GH_TOKEN (a
+# machine PAT with contents+statuses+administration on org repos) switches it to
+# fire-and-forget: the trigger returns in seconds and the agent's push deploys natively.
+
+on:
+  workflow_call: {}
+
+jobs:
+  agent:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Trigger notebook agent
+        env:
+          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+          GH_PAT: ${{ secrets.GH_PAT }}
+          AGENT_GH_TOKEN: ${{ secrets.AGENT_GH_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          if grep -q '<!-- draft' index.md; then echo "draft — not building"; exit 0; fi
+          # ensure a pages site exists (needs a token with repo admin, e.g. AGENT_GH_TOKEN; harmless otherwise)
+          GH_TOKEN="${AGENT_GH_TOKEN:-$GITHUB_TOKEN}" gh api -X POST "repos/$GITHUB_REPOSITORY/pages" -f build_type=workflow 2>/dev/null || true
+          printf '%s' "$GCP_SA_KEY" > /tmp/sa.json
+          gcloud auth activate-service-account --key-file=/tmp/sa.json --quiet && rm /tmp/sa.json
+          ENV="^~^REPO=$GITHUB_REPOSITORY~SHA=$GITHUB_SHA~PUSHER=$GITHUB_ACTOR~CONTEXT_TOKEN=$GH_PAT~GH_TOKEN=${AGENT_GH_TOKEN:-$GITHUB_TOKEN}"
+          if [ -n "$AGENT_GH_TOKEN" ]; then
+            gcloud run jobs execute notebook-agent --project data-desk-web --region europe-west1 --async --update-env-vars "$ENV"
+          else
+            gcloud run jobs execute notebook-agent --project data-desk-web --region europe-west1 --wait --update-env-vars "$ENV"
+            gh workflow run deploy.yml --ref main -R "$GITHUB_REPOSITORY"
+          fi
