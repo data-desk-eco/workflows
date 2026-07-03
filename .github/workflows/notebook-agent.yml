@@ -25,7 +25,7 @@ jobs:
           AGENT_GH_TOKEN: ${{ secrets.AGENT_GH_TOKEN }}
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          if grep -q '<!-- draft' README.md; then echo "draft — not building"; exit 0; fi
+          if grep -qE '^draft: *true' README.md; then echo "draft — not building"; exit 0; fi
           # ensure a pages site exists (needs a token with repo admin, e.g. AGENT_GH_TOKEN; harmless otherwise)
           GH_TOKEN="${AGENT_GH_TOKEN:-$GITHUB_TOKEN}" gh api -X POST "repos/$GITHUB_REPOSITORY/pages" -f build_type=workflow 2>/dev/null || true
           printf '%s' "$GCP_SA_KEY" > /tmp/sa.json
