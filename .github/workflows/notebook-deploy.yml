@@ -32,9 +32,13 @@ jobs:
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           mkdir -p /tmp/data-desk
-          curl -sfL -H "Authorization: token $GH_TOKEN" \
+          curl -fsS -L -H "Authorization: token $GH_TOKEN" \
             https://api.github.com/repos/data-desk-eco/data-desk/tarball/main \
-            | tar -xz -C /tmp/data-desk --strip-components=1
+            -o /tmp/data-desk.tar.gz || {
+              echo "::error::could not read data-desk-eco/data-desk. GH_PAT needs read access to it."
+              exit 1
+            }
+          tar -xz -C /tmp/data-desk --strip-components=1 -f /tmp/data-desk.tar.gz
           /tmp/data-desk/bin/data-desk link
 
       # Notebooks are public by default. Committing an access.conf opts the repo
