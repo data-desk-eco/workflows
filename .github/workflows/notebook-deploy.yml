@@ -31,7 +31,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          git clone --depth 1 "https://x-access-token:$GH_TOKEN@github.com/data-desk-eco/data-desk.git" /tmp/data-desk
+          mkdir -p /tmp/data-desk
+          curl -sfL -H "Authorization: token $GH_TOKEN" \
+            https://api.github.com/repos/data-desk-eco/data-desk/tarball/main \
+            | tar -xz -C /tmp/data-desk --strip-components=1
           /tmp/data-desk/bin/data-desk link
 
       # Notebooks are public by default. Committing an access.conf opts the repo
