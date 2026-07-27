@@ -28,7 +28,7 @@ jobs:
 
 ### Required secrets
 
-- `GH_PAT` — personal access token with `repo:read` on `data-desk-eco/.github` (used to fetch shared `.claude/` skills and `template.html`).
+- `GH_PAT` — personal access token with `repo:read` on `data-desk-eco/data-desk` (used to fetch shared skills, AGENTS.md and template.html).
 - `CLAUDE_CODE_OAUTH_TOKEN` *(optional)* — installs `@anthropic-ai/claude-code` if set so `make data` can shell out to `claude`.
 
 Both are configured at the org level; `secrets: inherit` passes them through.

@@ -31,7 +31,7 @@ jobs:
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           curl -sf -H "Authorization: token $GH_TOKEN" -H "Accept: application/vnd.github.raw" \
-            https://api.github.com/repos/data-desk-eco/.github/contents/scripts/shared-files.sh | sh
+            https://api.github.com/repos/data-desk-eco/data-desk/contents/infra/shared-files.sh | sh
 
       # Notebooks are public by default. Committing an access.conf opts the repo
       # into Cloudflare Zero Trust gating (see scripts/cf-access.sh).

@@ -1,7 +1,7 @@
 name: Notebook agent
 
 # reusable trigger for the md-notebook flow: builds the notebook from the README.md brief
-# via the notebook-agent cloud run job (see data-desk-eco/.github, infra/notebook-agent/).
+# via the notebook-agent cloud run job (see data-desk-eco/data-desk, infra/notebook-agent/).
 # callers need permissions: contents+statuses+actions write, and secrets: inherit.
 #
 # write-back token, in order of preference:
