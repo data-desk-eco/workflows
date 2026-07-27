@@ -25,16 +25,17 @@ jobs:
           fetch-depth: 0
       - run: yarn --frozen-lockfile
 
+      # same wiring as a laptop: clone data-desk, let its CLI link the repo.
       - name: Setup
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          curl -sf -H "Authorization: token $GH_TOKEN" -H "Accept: application/vnd.github.raw" \
-            https://api.github.com/repos/data-desk-eco/data-desk/contents/infra/shared-files.sh | sh
+          git clone --depth 1 "https://x-access-token:$GH_TOKEN@github.com/data-desk-eco/data-desk.git" /tmp/data-desk
+          /tmp/data-desk/bin/data-desk link
 
       # Notebooks are public by default. Committing an access.conf opts the repo
-      # into Cloudflare Zero Trust gating (see scripts/cf-access.sh).
+      # into Cloudflare Zero Trust gating.
       - name: Configure Cloudflare Access
         if: hashFiles('access.conf') != ''
         env:
@@ -44,7 +45,7 @@ jobs:
             echo "CLOUDFLARE_API_TOKEN not set — skipping Access config."
             exit 0
           fi
-          bash scripts/cf-access.sh
+          bash /tmp/data-desk/infra/cf-access.sh
 
       - name: Authenticate to Google Cloud
         if: ${{ !inputs.skip_data }}
