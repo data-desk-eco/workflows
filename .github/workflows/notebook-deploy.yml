@@ -111,23 +111,28 @@ jobs:
       # integration". `data-desk new` normally turns Pages on at creation, under
       # the operator's own credentials; this is the safety net for a repository
       # made some other way. Whether it can act depends on GH_PAT's scope, so it
-      # fails with instructions rather than pretending to have succeeded. An
-      # existing notebook returns 200 from the GET and skips straight past.
+      # fails with instructions rather than pretending to have succeeded.
+      #
+      # The "is it already on?" check has to use GITHUB_TOKEN, not GH_PAT: that
+      # token is scoped to the data-desk repository, so it answers 404 for every
+      # notebook whether Pages is enabled there or not. GITHUB_TOKEN can always
+      # read its own repository's Pages settings under the pages: write grant.
       - name: Enable GitHub Pages
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           # steps here run under sh, not bash: no arrays
           api="https://api.github.com/repos/$GITHUB_REPOSITORY/pages"
-          gh_api() {
-            curl -s -H "Authorization: token $GH_PAT" \
-                 -H "Accept: application/vnd.github+json" "$@"
-          }
-          if [ "$(gh_api -o /dev/null -w '%{http_code}' "$api")" = 200 ]; then
+          accept="Accept: application/vnd.github+json"
+          seen="$(curl -s -o /dev/null -w '%{http_code}' \
+            -H "Authorization: token $GITHUB_TOKEN" -H "$accept" "$api")"
+          if [ "$seen" = 200 ]; then
             echo "Pages already enabled for $GITHUB_REPOSITORY."
             exit 0
           fi
-          code="$(gh_api -o /tmp/pages.json -w '%{http_code}' -X POST \
+          code="$(curl -s -o /tmp/pages.json -w '%{http_code}' -X POST \
+            -H "Authorization: token $GH_PAT" -H "$accept" \
             "$api" -d '{"build_type":"workflow"}')"
           case "$code" in
             201|409) echo "Enabled Pages for $GITHUB_REPOSITORY." ;;
