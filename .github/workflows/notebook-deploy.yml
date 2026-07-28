@@ -41,8 +41,9 @@ jobs:
           tar -xz -C /tmp/data-desk --strip-components=1 -f /tmp/data-desk.tar.gz
           /tmp/data-desk/bin/data-desk link
 
-      # Notebooks are public by default. Committing an access.conf opts the repo
-      # into Cloudflare Zero Trust gating.
+      # notebook-template ships an access.conf, so this runs for every notebook
+      # and a new one is Data-Desk-only from its first deploy. Deleting the file
+      # stops the app being managed here; it does not take the app down.
       - name: Configure Cloudflare Access
         if: hashFiles('access.conf') != ''
         env:
@@ -104,9 +105,36 @@ jobs:
       - run: make build
       - run: "[ -f favicon.ico ] && cp favicon.ico docs/.observable/dist/ || true"
 
+      # Creating a Pages site needs repository admin, which GITHUB_TOKEN never
+      # has however its permissions are set — so configure-pages cannot do it
+      # and a new notebook's first deploy dies on "Resource not accessible by
+      # integration". GH_PAT does have admin, so enable Pages here instead.
+      # Existing notebooks return 200 from the GET and skip straight past.
+      - name: Enable GitHub Pages
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          api="https://api.github.com/repos/$GITHUB_REPOSITORY/pages"
+          auth=(-H "Authorization: token $GH_PAT" -H "Accept: application/vnd.github+json")
+          if [ "$(curl -s -o /dev/null -w '%{http_code}' "${auth[@]}" "$api")" = 200 ]; then
+            echo "Pages already enabled for $GITHUB_REPOSITORY."
+            exit 0
+          fi
+          code="$(curl -s -o /tmp/pages.json -w '%{http_code}' -X POST "${auth[@]}" \
+            "$api" -d '{"build_type":"workflow"}')"
+          case "$code" in
+            201|409) echo "Enabled Pages for $GITHUB_REPOSITORY." ;;
+            *)
+              cat /tmp/pages.json >&2
+              echo "::error::could not enable Pages for $GITHUB_REPOSITORY (HTTP $code). GH_PAT needs repository administration rights on data-desk-eco: 'repo' on a classic token, or 'Administration: read and write' on a fine-grained one."
+              exit 1 ;;
+          esac
+
+      # enablement is left off: the step above owns it, and configure-pages
+      # would only retry the same call with a token that cannot make it.
       - uses: actions/configure-pages@v6
         with:
-          enablement: true
+          enablement: false
       - uses: actions/upload-pages-artifact@v5
         with:
           path: docs/.observable/dist
