@@ -41,15 +41,16 @@ jobs:
           tar -xz -C /tmp/data-desk --strip-components=1 -f /tmp/data-desk.tar.gz
           /tmp/data-desk/bin/data-desk link
 
-      # TEMPORARY: gated again while notebooks that were gated by hand, with no
-      # access.conf committed, are backfilled. Without the gate their next
-      # deploy would read "no access.conf" as "publish me" and take the login
-      # off sensitive work. Remove the `if:` once the backfill is done, so a
-      # deleted access.conf unpublishes as intended.
+      # Runs whether or not access.conf exists: its absence is how a notebook
+      # asks to be published, so gating the step on the file would make deleting
+      # it do nothing. The script tells a deleted file apart from one that never
+      # existed — notebooks gated by hand before this convention must not be
+      # published by their own scheduled deploy — and needs GITHUB_TOKEN to ask
+      # GitHub which of the two it is looking at.
       - name: Configure Cloudflare Access
-        if: hashFiles('access.conf') != ''
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
             echo "CLOUDFLARE_API_TOKEN not set — skipping Access config."
