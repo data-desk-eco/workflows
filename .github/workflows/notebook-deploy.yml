@@ -108,8 +108,11 @@ jobs:
       # Creating a Pages site needs repository admin, which GITHUB_TOKEN never
       # has however its permissions are set — so configure-pages cannot do it
       # and a new notebook's first deploy dies on "Resource not accessible by
-      # integration". GH_PAT does have admin, so enable Pages here instead.
-      # Existing notebooks return 200 from the GET and skip straight past.
+      # integration". `data-desk new` normally turns Pages on at creation, under
+      # the operator's own credentials; this is the safety net for a repository
+      # made some other way. Whether it can act depends on GH_PAT's scope, so it
+      # fails with instructions rather than pretending to have succeeded. An
+      # existing notebook returns 200 from the GET and skips straight past.
       - name: Enable GitHub Pages
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
@@ -130,7 +133,7 @@ jobs:
             201|409) echo "Enabled Pages for $GITHUB_REPOSITORY." ;;
             *)
               cat /tmp/pages.json >&2
-              echo "::error::could not enable Pages for $GITHUB_REPOSITORY (HTTP $code). GH_PAT needs repository administration rights on data-desk-eco: 'repo' on a classic token, or 'Administration: read and write' on a fine-grained one."
+              echo "::error::could not enable Pages for $GITHUB_REPOSITORY (HTTP $code). Enable it once from a laptop: gh api repos/$GITHUB_REPOSITORY/pages -X POST -f build_type=workflow. To let CI do this instead, GH_PAT needs administration rights across data-desk-eco, not just read on data-desk."
               exit 1 ;;
           esac
 
