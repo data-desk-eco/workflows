@@ -41,11 +41,13 @@ jobs:
           tar -xz -C /tmp/data-desk --strip-components=1 -f /tmp/data-desk.tar.gz
           /tmp/data-desk/bin/data-desk link
 
-      # Runs whether or not access.conf exists — it has to, because its absence
-      # is what tells the script to take a notebook's Access application down.
-      # Gating the step on the file meant a deleted access.conf did nothing and
-      # the notebook stayed behind a login.
+      # TEMPORARY: gated again while notebooks that were gated by hand, with no
+      # access.conf committed, are backfilled. Without the gate their next
+      # deploy would read "no access.conf" as "publish me" and take the login
+      # off sensitive work. Remove the `if:` once the backfill is done, so a
+      # deleted access.conf unpublishes as intended.
       - name: Configure Cloudflare Access
+        if: hashFiles('access.conf') != ''
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
