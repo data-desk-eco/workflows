@@ -114,13 +114,17 @@ jobs:
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
         run: |
+          # steps here run under sh, not bash: no arrays
           api="https://api.github.com/repos/$GITHUB_REPOSITORY/pages"
-          auth=(-H "Authorization: token $GH_PAT" -H "Accept: application/vnd.github+json")
-          if [ "$(curl -s -o /dev/null -w '%{http_code}' "${auth[@]}" "$api")" = 200 ]; then
+          gh_api() {
+            curl -s -H "Authorization: token $GH_PAT" \
+                 -H "Accept: application/vnd.github+json" "$@"
+          }
+          if [ "$(gh_api -o /dev/null -w '%{http_code}' "$api")" = 200 ]; then
             echo "Pages already enabled for $GITHUB_REPOSITORY."
             exit 0
           fi
-          code="$(curl -s -o /tmp/pages.json -w '%{http_code}' -X POST "${auth[@]}" \
+          code="$(gh_api -o /tmp/pages.json -w '%{http_code}' -X POST \
             "$api" -d '{"build_type":"workflow"}')"
           case "$code" in
             201|409) echo "Enabled Pages for $GITHUB_REPOSITORY." ;;
