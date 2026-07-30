@@ -12,6 +12,12 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     container: ghcr.io/data-desk-eco/notebook-runner:latest
+    # two deploys of one notebook (a push landing on top of the nightly
+    # schedule) both regenerate data/ and race to commit it. queue them instead:
+    # cancelling would drop the scheduled refresh.
+    concurrency:
+      group: notebook-deploy-${{ github.repository }}-${{ github.ref }}
+      cancel-in-progress: false
     permissions:
       contents: write
       pages: write
@@ -100,7 +106,12 @@ jobs:
               exit 0
             fi
             echo "Push rejected (attempt $attempt); rebasing onto origin/${GITHUB_REF_NAME:-main} and retrying."
-            git pull --rebase --autostash origin "${GITHUB_REF_NAME:-main}" || exit 1
+            # -X theirs keeps the commit being replayed — this run's freshly
+            # generated data — where the two deploys touched the same file.
+            # without it the rebase stops on a conflict ("could not apply ...
+            # Update data and shared files") and the job dies mid-rebase.
+            git pull --rebase -X theirs --autostash origin "${GITHUB_REF_NAME:-main}" \
+              || { git rebase --abort 2>/dev/null; exit 1; }
           done
           echo "Failed to push after rebasing; giving up." >&2
           exit 1
