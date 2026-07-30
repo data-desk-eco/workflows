@@ -127,6 +127,17 @@ jobs:
       # made some other way. Whether it can act depends on GH_PAT's scope, so it
       # fails with instructions rather than pretending to have succeeded.
       #
+      # That failure is load-bearing, so do not "repair" it in a batch. The org
+      # is on the Team plan: a Pages site published from a private repository is
+      # public, and cf-access.sh only gates a notebook that has ever committed an
+      # access.conf — for one that never has, it deliberately leaves Cloudflare
+      # alone. A repository with no access.conf and no hand-made Access
+      # application therefore goes on the open web the moment Pages is turned on,
+      # and Pages staying off is the only thing holding it. On 2026-07-30 four
+      # notebooks were enabled from a laptop to clear this error and three of
+      # them published unreleased work for about ten minutes. Check the gate
+      # before the build, never the other way round.
+      #
       # The "is it already on?" check has to use GITHUB_TOKEN, not GH_PAT: that
       # token is scoped to the data-desk repository, so it answers 404 for every
       # notebook whether Pages is enabled there or not. GITHUB_TOKEN can always
@@ -152,7 +163,7 @@ jobs:
             201|409) echo "Enabled Pages for $GITHUB_REPOSITORY." ;;
             *)
               cat /tmp/pages.json >&2
-              echo "::error::could not enable Pages for $GITHUB_REPOSITORY (HTTP $code). Enable it once from a laptop: gh api repos/$GITHUB_REPOSITORY/pages -X POST -f build_type=workflow. To let CI do this instead, GH_PAT needs administration rights across data-desk-eco, not just read on data-desk."
+              echo "::error::Pages is off for $GITHUB_REPOSITORY (HTTP $code), so this notebook cannot deploy. Before turning it on, check the notebook is meant to be readable: a Pages site on a private repo is public on the Team plan, and a repo with no access.conf has no Cloudflare Access application in front of it. If it should be gated, commit an access.conf first — an empty one is Data-Desk-only. If it should be published, enable Pages from a laptop: gh api repos/$GITHUB_REPOSITORY/pages -X POST -f build_type=workflow. Do not give GH_PAT org administration to make this step self-serve; this failure is the only gate on a notebook that has neither."
               exit 1 ;;
           esac
 
